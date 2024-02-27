@@ -1,0 +1,180 @@
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+public class Main {
+    private static Connection connection;
+    private static Scanner scanner = new Scanner(System.in);
+    
+    public static void main(String[] args) {
+        conectarAoBanco();
+        criarTabela();
+        
+        int opcao;
+        do {
+            exibirMenu();
+            opcao = scanner.nextInt();
+            switch (opcao) {
+                case 1:
+                    listarPessoas();
+                    break;
+                case 2:
+                    inserirPessoa();
+                    break;
+                case 3:
+                    excluirPessoa();
+                    break;
+                case 4:
+                    atualizarPessoa();
+                    break;
+                case 5:
+                    System.out.println("Saindo...");
+                    break;
+                default:
+                    System.out.println("Opcao invalida.");
+            }
+        } while (opcao != 5);
+        
+        scanner.close();
+        desconectarDoBanco();
+    }
+    
+    private static void conectarAoBanco() {
+        try {
+            connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/seu_banco_de_dados", "seu_usuario", "sua_senha");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private static void desconectarDoBanco() {
+        try {
+            if (connection != null && !connection.isClosed()) {
+                connection.close();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private static void criarTabela() {
+        try {
+            PreparedStatement ps = connection.prepareStatement("CREATE TABLE IF NOT EXISTS minha_tabela (id SERIAL PRIMARY KEY, nome VARCHAR(100), idade INT)");
+            ps.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private static void exibirMenu() {
+        System.out.println("Selecione uma opcao:");
+        System.out.println("1. Listar Pessoas");
+        System.out.println("2. Inserir Pessoa");
+        System.out.println("3. Excluir Pessoa");
+        System.out.println("4. Atualizar Pessoa");
+        System.out.println("5. Sair");
+    }
+    
+    private static void listarPessoas() {
+        List<Pessoa> pessoas = new ArrayList<>();
+        try {
+            PreparedStatement ps = connection.prepareStatement("SELECT * FROM minha_tabela");
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Pessoa pessoa = new Pessoa();
+                pessoa.setId(rs.getInt("id"));
+                pessoa.setNome(rs.getString("nome"));
+                pessoa.setIdade(rs.getInt("idade"));
+                pessoas.add(pessoa);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        for (Pessoa pessoa : pessoas) {
+            System.out.println(pessoa.getId() + ": " + pessoa.getNome() + " - " + pessoa.getIdade() + " anos");
+        }
+    }
+    
+    private static void inserirPessoa() {
+        System.out.println("Digite o nome da pessoa:");
+        String nome = scanner.next();
+        System.out.println("Digite a idade da pessoa:");
+        int idade = scanner.nextInt();
+        
+        try {
+            PreparedStatement ps = connection.prepareStatement("INSERT INTO minha_tabela (nome, idade) VALUES (?, ?)");
+            ps.setString(1, nome);
+            ps.setInt(2, idade);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private static void excluirPessoa() {
+        System.out.println("Digite o ID da pessoa a ser excluida:");
+        int id = scanner.nextInt();
+        
+        try {
+            PreparedStatement ps = connection.prepareStatement("DELETE FROM minha_tabela WHERE id = ?");
+            ps.setInt(1, id);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private static void atualizarPessoa() {
+        System.out.println("Digite o ID da pessoa a ser atualizada:");
+        int id = scanner.nextInt();
+        System.out.println("Digite o novo nome da pessoa:");
+        String nome = scanner.next();
+        System.out.println("Digite a nova idade da pessoa:");
+        int idade = scanner.nextInt();
+        
+        try {
+            PreparedStatement ps = connection.prepareStatement("UPDATE minha_tabela SET nome = ?, idade = ? WHERE id = ?");
+            ps.setString(1, nome);
+            ps.setInt(2, idade);
+            ps.setInt(3, id);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    static class Pessoa {
+        private int id;
+        private String nome;
+        private int idade;
+        
+        public int getId() {
+            return id;
+        }
+        
+        public void setId(int id) {
+            this.id = id;
+        }
+        
+        public String getNome() {
+            return nome;
+        }
+        
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+        
+        public int getIdade() {
+            return idade;
+        }
+        
+        public void setIdade(int idade) {
+            this.idade = idade;
+        }
+    }
+}
